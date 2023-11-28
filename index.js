@@ -27,6 +27,54 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    const userCollection = client.db("eduMentor360").collection("users");
+
+    const sponsorCollection=client.db("eduMentor360").collection("sponsors");
+
+    const teacherRequestCollection=client.db("eduMentor360").collection("teacherRequest");
+    // sponsors
+    app.get('/sponsors',async(req,res)=>{
+      const cursor = sponsorCollection.find();
+      const sponsors = await cursor.toArray();
+      res.send(sponsors);
+    });
+    // users 
+    app.get('/users',async(req,res)=>{
+      const cursor = userCollection.find();
+      const users = await cursor.toArray();
+      res.send(users);
+    });
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email }
+      const existUser = await userCollection.findOne(query);
+      if (existUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+    // teacher request
+    app.post('/teacherRequest', async (req, res) => {
+      const teacherRequest = req.body;
+      const query = { email: teacherRequest.email }
+      const existUser = await teacherRequestCollection.findOne(query);
+      if (existUser) {
+        return res.send({ message: 'already have requested once', insertedId: null });
+      }
+      const result = await teacherRequestCollection.insertOne(teacherRequest);
+      res.send(result);
+    });
+    app.get('/teacherRequest',async(req,res)=>{
+      const cursor = teacherRequestCollection.find();
+      const teacherRequests = await cursor.toArray();
+      res.send(teacherRequests);
+    });
+
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
