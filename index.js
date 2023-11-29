@@ -178,6 +178,13 @@ async function run() {
       const result=await paymentCollection.findOne(query);
       res.send(result);
     });
+    // app.get('/payments/:id',async(req,res)=>{
+    //   const id=req.params.id;
+    //   console.log(id);
+    //   const query={_id:new ObjectId(id)};
+    //   const result=await paymentCollection.findOne(query);
+    //   res.send(result);
+    // });
 
 
 
