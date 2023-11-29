@@ -186,6 +186,23 @@ async function run() {
     //   res.send(result);
     // });
 
+    // estimated document count
+
+    app.get('/count',async(req,res)=>{
+      const userCount=await userCollection.estimatedDocumentCount();
+      const paymentCount=await paymentCollection.estimatedDocumentCount();
+      const classCount=await courseRequestCollection.estimatedDocumentCount(); 
+      const count={
+        userCount:userCount,
+        paymentCount:paymentCount,
+        classCount:classCount,
+        
+      }
+      res.send(count);
+    })
+
+
+
 
 
 
