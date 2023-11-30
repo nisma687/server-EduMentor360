@@ -4,7 +4,7 @@ const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config();
 
-
+const jwt=require('jsonwebtoken');
 
 app.use(cors());
 app.use(express.json());
@@ -39,6 +39,45 @@ async function run() {
 
     const paymentCollection=client.db("eduMentor360").collection("payments");
 
+    // JWT
+
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '2h' }) ;
+      res.send({ token });
+    })
+    // middlewares
+     const verifyToken = (req, res, next) => {
+      
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
+    // use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
+
+
+
+
     // sponsors
     app.get('/sponsors',async(req,res)=>{
       const cursor = sponsorCollection.find();
@@ -46,7 +85,7 @@ async function run() {
       res.send(sponsors);
     });
     // users 
-    app.get('/users',async(req,res)=>{
+    app.get('/users',verifyToken,async(req,res)=>{
       const cursor = userCollection.find();
       const users = await cursor.toArray();
       res.send(users);
@@ -61,7 +100,7 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
-    app.patch('/users/:email',async(req,res)=>{
+    app.patch('/users/:email',verifyToken,async(req,res)=>{
       const email=req.params.email;
       const query={email:email};
       const updatedUser=req.body;
@@ -75,7 +114,7 @@ async function run() {
     
     })
     // teacher request
-    app.post('/teacherRequest', async (req, res) => {
+    app.post('/teacherRequest',verifyToken, async (req, res) => {
       const teacherRequest = req.body;
       const query = { email: teacherRequest.email }
       const existUser = await teacherRequestCollection.findOne(query);
@@ -85,12 +124,12 @@ async function run() {
       const result = await teacherRequestCollection.insertOne(teacherRequest);
       res.send(result);
     });
-    app.get('/teacherRequest',async(req,res)=>{
+    app.get('/teacherRequest',verifyToken,async(req,res)=>{
       const cursor = teacherRequestCollection.find();
       const teacherRequests = await cursor.toArray();
       res.send(teacherRequests);
     });
-    app.patch('/teacherRequest/:id',async(req,res)=>{
+    app.patch('/teacherRequest/:id',verifyToken,async(req,res)=>{
       const id=req.params.id;
       const query={_id:new ObjectId(id)};
       const updatedTeacherRequest=req.body;
@@ -117,7 +156,7 @@ async function run() {
     
     });
     //add course request
-    app.post('/addCourseRequest', async (req, res) => {
+    app.post('/addCourseRequest',verifyToken, async (req, res) => {
       const courseRequest = req.body;
       const result = await courseRequestCollection.insertOne(courseRequest);
       res.send(result);
@@ -143,6 +182,30 @@ async function run() {
       const id=req.params.id;
       const query={_id:new ObjectId(id)};
       const result=await courseRequestCollection.findOne(query);
+      res.send(result);
+    });
+    // email
+    // add.patch('/addCourseRequest/:email',async(req,res)=>{
+    //   const email=req.params.email;
+    //   const query={email:email};
+    //   const updatedCourseRequest=req.body;
+    //   const updateDoc={
+    //     $set:{
+         
+    //       description:updatedCourseRequest.description,
+    //       img:updatedCourseRequest.img,
+    //       price:updatedCourseRequest.price,
+    //       title:updatedCourseRequest.title
+    //     } 
+    //   }
+    //   const result=await courseRequestCollection.updateOne(query,updateDoc);
+    //   res.send(result);
+    // })
+    // delete
+    app.delete('/addCourseRequest/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)};
+      const result=await courseRequestCollection.deleteOne(query);
       res.send(result);
     });
     // payment-intent
@@ -200,7 +263,19 @@ async function run() {
       }
       res.send(count);
     })
-
+    // admin
+    app.patch
+    ('/users/admin/:id',  async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: 'admin'
+        }
+      }
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
 
 
 
